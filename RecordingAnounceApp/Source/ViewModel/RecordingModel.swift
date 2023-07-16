@@ -28,6 +28,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     var realm: Realm
 //    @Published var recordings: Results<Recording>
     @Published var recordings: Results<Recording> // change this line
+    @Published var playingRecordingID: String? // add this new property
 
     @Published var recording = false
     @Published var repeatMode = false
@@ -110,6 +111,8 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 try realm.write {
                     recording.isPlaying = true
                 }
+
+                playingRecordingID = id // add this line
             } catch {
                 print("Could not play recording")
             }
@@ -122,12 +125,14 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 try realm.write {
                     recording.isPlaying = false
                 }
+
+                playingRecordingID = nil // add this line
             } catch {
                 print("Failed to update isPlaying status: \(error)")
             }
         }
     }
-
+    
     func stopPlaying(id: String) {
         if let recording = getRecording(by: id) {
             audioPlayer.stop()
@@ -136,6 +141,8 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 try realm.write {
                     recording.isPlaying = false
                 }
+
+                playingRecordingID = nil // add this line
             } catch {
                 print("Failed to update isPlaying status: \(error)")
             }

@@ -132,16 +132,16 @@ struct RecordingRowView: View {
                 Text("\(recording.name)")
                 Spacer()
                 Button(action: {
-                    if recording.isPlaying {
+                    if self.recorderViewModel.playingRecordingID == recording.id {
                         self.recorderViewModel.stopPlaying(id: recording.id)
                     } else {
                         self.recorderViewModel.playRecording(id: recording.id)
                     }
                 }) {
-                    Image(systemName: recording.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                    Image(systemName: self.recorderViewModel.playingRecordingID == recording.id ? "stop.circle.fill" : "play.circle.fill")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .foregroundColor(recording.isPlaying ? .green : .blue)
+                        .foregroundColor(self.recorderViewModel.playingRecordingID == recording.id ? .green : .blue)
                         .frame(width: 25, height: 25)
                 }
                 .buttonStyle(PlainButtonStyle())
