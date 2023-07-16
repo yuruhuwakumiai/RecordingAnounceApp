@@ -34,7 +34,7 @@ struct ContentView: View {
                     Button(action: {
                         self.recorderViewModel.stopRecording()
                     }) {
-                        Image(systemName: "mic.fill")
+                        Image("murakoRe")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 76, height: 76)
@@ -59,7 +59,7 @@ struct ContentView: View {
             .padding(.all, 10)
             .padding(.bottom, 10)
 
-            Text(self.recorderViewModel.recording ? "Recording..." : "Tap to record")
+            Text(self.recorderViewModel.recording ? "俺に負けるなよ！" : "Tap to record")
                 .font(.title)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
         }
