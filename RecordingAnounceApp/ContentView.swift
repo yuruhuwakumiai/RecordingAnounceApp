@@ -127,25 +127,11 @@ struct RecordingRowView: View {
                         self.recorderViewModel.playRecording(id: recordingID)
                     }
                 }) {
-                    ZStack {
-                        Circle()
-                            .frame(width: 60, height: 60)
-                            .foregroundColor(recording.isPlaying ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
-                            .scaleEffect(recording.isPlaying ? 2 : 1)
-                            .animation(recording.isPlaying ? Animation.easeOut(duration: 1).repeatForever(autoreverses: false) : .default)
-
-                        Circle()
-                            .frame(width: 60, height: 60)
-                            .foregroundColor(recording.isPlaying ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
-                            .scaleEffect(recording.isPlaying ? 1.5 : 1)
-                            .animation(recording.isPlaying ? Animation.easeOut(duration: 1).delay(0.3).repeatForever(autoreverses: false) : .default)
-
-                        Image(systemName: recording.isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .foregroundColor(recording.isPlaying ? .green : .blue)
-                            .frame(width: 30, height: 30)
-                    }
+                    Image(systemName: recording.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .foregroundColor(recording.isPlaying ? .green : .blue)
+                        .frame(width: 25, height: 25)
                 }
                 .buttonStyle(PlainButtonStyle())
                 .contentShape(Rectangle())
