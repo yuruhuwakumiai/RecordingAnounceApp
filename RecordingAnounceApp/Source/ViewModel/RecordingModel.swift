@@ -51,7 +51,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
             try recordingSession.setCategory(.playAndRecord, mode: .default)
             try recordingSession.setActive(true)
         } catch {
-            print("Failed to set up recording session")
+            print("Failed to set up recording session: \(error)")
         }
 
         let documentPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -70,17 +70,20 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
             recording = true
         } catch {
-            print("Could not start recording")
+            print("Could not start recording: \(error)")
         }
     }
+
 
     func stopRecording() {
         audioRecorder.stop()
         recording = false
         showSheet = true
 
+        // Use the entire URL, not just the last path component
+        let audioFileName = audioRecorder.url.absoluteString
         let recording = Recording()
-        recording.fileURL = audioRecorder.url.absoluteString
+        recording.fileURL = audioFileName // This line is modified
         recording.createdAt = Date()
         recording.name = "New Recording"
 
@@ -96,6 +99,8 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
 
+
+
     func getRecording(by id: String) -> Recording? {
         return realm.object(ofType: Recording.self, forPrimaryKey: id)
     }
@@ -103,7 +108,12 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     func playRecording(id: String) {
         if let recording = getRecording(by: id) {
             do {
-                audioPlayer = try AVAudioPlayer(contentsOf: URL(string: recording.fileURL)!)
+                // Use the entire URL, not just the filename
+                let audioFileUrl = URL(string: recording.fileURL)!
+
+                print("Trying to play audio file at: \(audioFileUrl)")
+
+                audioPlayer = try AVAudioPlayer(contentsOf: audioFileUrl)
                 audioPlayer.delegate = self
                 audioPlayer.numberOfLoops = repeatMode ? -1 : 0
                 audioPlayer.play()
@@ -112,12 +122,19 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
                     recording.isPlaying = true
                 }
 
-                playingRecordingID = id // add this line
+                playingRecordingID = id
             } catch {
-                print("Could not play recording")
+                print("Could not play recording: \(error)")
             }
         }
     }
+
+
+
+
+
+
+
 
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         if let recording = realm.objects(Recording.self).filter("fileURL == %@", player.url!.absoluteString).first {
@@ -132,7 +149,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
             }
         }
     }
-    
+
     func stopPlaying(id: String) {
         if let recording = getRecording(by: id) {
             audioPlayer.stop()

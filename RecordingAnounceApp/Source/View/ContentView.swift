@@ -40,47 +40,38 @@ struct ContentView: View {
             .padding()
 
             ZStack {
+                if self.recorderViewModel.recording {
+                    PulsingAnimation()
+                        .frame(width: 110, height: 110)
+                }
+
                 Circle()
                     .stroke(lineWidth: 20)
                     .frame(width: 100, height: 100)
                     .foregroundColor(self.recorderViewModel.recording ? .red : .gray)
-                    .animation(.default)
 
-                if self.recorderViewModel.recording {
-                    Button(action: {
+                Button(action: {
+                    if self.recorderViewModel.recording {
                         self.recorderViewModel.stopRecording()
-                    }) {
-                        Image("murakoRe")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 76, height: 76)
-                            .foregroundColor(.black)
-                    }
-                    .scaleEffect(1.3)
-                    .animation(Animation.easeInOut(duration: 0.5).repeatForever(autoreverses: true))
-                } else {
-                    Button(action: {
+                    } else {
                         self.recorderViewModel.startRecording()
-                    }) {
-                        Image(systemName: "mic.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 76, height: 76)
-                            .foregroundColor(.black)
                     }
-                    .scaleEffect(1.1)
-                    .animation(Animation.easeInOut(duration: 2).repeatForever(autoreverses: true))
+                }) {
+                    Image(systemName: "mic.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 76, height: 76)
+                        .foregroundColor(.black)
                 }
             }
             .padding(.all, 10)
             .padding(.bottom, 10)
 
-            Text(self.recorderViewModel.recording ? "俺に負けるなよ！" : "タップして声(魂)を吹き込め！")
+            Text(self.recorderViewModel.recording ? "録音中" : "タップして声(魂)を吹き込め！")
                 .font(.title)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
 
-        }
-        .sheet(isPresented: $recorderViewModel.showSheet) {
+        }        .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
                 Spacer()
                 Text("名前をつけてやれ！！")
@@ -161,6 +152,23 @@ struct RecordingRowView: View {
                 .contentShape(Rectangle())
             }
         }
+    }
+}
+
+struct PulsingAnimation: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        Circle()
+            .fill(Color.red.opacity(0.3))
+            .scaleEffect(isAnimating ? 1 : 0.6)
+            .animation(Animation.easeInOut(duration: 1).repeatForever(autoreverses: true))
+            .onAppear {
+                isAnimating = true
+            }
+            .onDisappear {
+                isAnimating = false
+            }
     }
 }
 
