@@ -71,7 +71,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
-                Text("名前をつけてあげよう")
+                Text("Enter a new name for the recording.")
                 TextField("Name", text: $newRecordingName)
                 Button(action: {
                     if let index = recorderViewModel.currentRecordingIndex {
@@ -110,6 +110,12 @@ struct RecordingRowView: View {
                 }
             }) {
                 Image(systemName: recorderViewModel.recordings[index].isPlaying ? "stop.circle" : "play.circle")
+            }
+            Button(action: {
+                recorderViewModel.currentRecordingIndex = index
+                recorderViewModel.showSheet = true
+            }) {
+                Image(systemName: "pencil")
             }
         }
     }
