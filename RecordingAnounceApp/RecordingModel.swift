@@ -9,7 +9,8 @@ import Combine
 import AVFoundation
 
 // MARK: - Model
-struct Recording {
+struct Recording: Identifiable {
+    let id = UUID()
     let fileURL: URL
     let createdAt: Date
     var isPlaying: Bool = false
@@ -26,7 +27,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     var audioRecorder: AVAudioRecorder!
     var audioPlayer: AVAudioPlayer!
-    var currentRecordingIndex: Int?
+    var currentRecordingID: UUID?
 
     func startRecording() {
         let recordingSession = AVAudioSession.sharedInstance()
@@ -64,18 +65,24 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
         let recording = Recording(fileURL: audioRecorder.url, createdAt: Date(), name: "New Recording")
         recordings.append(recording)
-        currentRecordingIndex = recordings.count - 1
+        currentRecordingID = recording.id
     }
-    
-    func playRecording(index: Int) {
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: recordings[index].fileURL)
-            audioPlayer.delegate = self
-            audioPlayer.numberOfLoops = repeatMode ? -1 : 0
-            audioPlayer.play()
-            recordings[index].isPlaying = true
-        } catch {
-            print("Could not play recording")
+
+    func getRecording(by id: UUID) -> Recording? {
+        return recordings.first { $0.id == id }
+    }
+
+    func playRecording(id: UUID) {
+        if let index = recordings.firstIndex(where: { $0.id == id }) {
+            do {
+                audioPlayer = try AVAudioPlayer(contentsOf: recordings[index].fileURL)
+                audioPlayer.delegate = self
+                audioPlayer.numberOfLoops = repeatMode ? -1 : 0
+                audioPlayer.play()
+                recordings[index].isPlaying = true
+            } catch {
+                print("Could not play recording")
+            }
         }
     }
 
@@ -85,14 +92,16 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
     }
 
-    func stopPlaying(index: Int) {
-        audioPlayer.stop()
-        recordings[index].isPlaying = false
+    func stopPlaying(id: UUID) {
+        if let index = recordings.firstIndex(where: { $0.id == id }) {
+            audioPlayer.stop()
+            recordings[index].isPlaying = false
+        }
     }
 
     func deleteRecording(recording: Recording) {
         // Remove recording from recordings array
-        if let index = self.recordings.firstIndex(where: { $0.fileURL == recording.fileURL }) {
+        if let index = self.recordings.firstIndex(where: { $0.id == recording.id }) {
             self.recordings.remove(at: index)
         }
 

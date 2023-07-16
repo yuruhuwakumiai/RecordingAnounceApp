@@ -10,14 +10,14 @@ import SwiftUI
 // MARK: - View
 struct ContentView: View {
     @ObservedObject var recorderViewModel = RecorderViewModel()
-    @State private var newRecordingName: String = ""
+    @State private var newRecordingName: String = "名無し"
 
     var body: some View {
         VStack {
             List {
                 Section(header: Text("Recordings")) {
-                    ForEach(Array(zip(recorderViewModel.recordings.indices, recorderViewModel.recordings)), id: \.1.createdAt) { index, _ in
-                        RecordingRowView(recorderViewModel: recorderViewModel, index: index)
+                    ForEach(recorderViewModel.recordings) { recording in
+                        RecordingRowView(recorderViewModel: recorderViewModel, recordingID: recording.id)
                     }
                     .onDelete(perform: delete)
                 }
@@ -65,30 +65,32 @@ struct ContentView: View {
             .padding(.all, 10)
             .padding(.bottom, 10)
 
-            Text(self.recorderViewModel.recording ? "俺に負けるなよ！" : "Tap to record")
+            Text(self.recorderViewModel.recording ? "俺に負けるなよ！" : "タップして声(魂)を吹き込め！")
                 .font(.title)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
+
         }
         .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
-                Text("Enter a new name for the recording.")
-                TextField("Name", text: $newRecordingName)
+                Text("名前をつけてやれ！！")
+                TextField("なまえ", text: $newRecordingName)
                 Button(action: {
-                    if let index = recorderViewModel.currentRecordingIndex {
+                    if let id = recorderViewModel.currentRecordingID,
+                       let index = recorderViewModel.recordings.firstIndex(where: { $0.id == id }) {
                         recorderViewModel.recordings[index].name = newRecordingName
                     }
                     recorderViewModel.showSheet = false
                 }) {
-                    Text("Save")
+                    Text("保存する")
                 }
             }
             .padding()
         }
     }
 
-func delete(at offsets: IndexSet) {
-    offsets.forEach { index in
-        let recording = recorderViewModel.recordings[index]
+    func delete(at offsets: IndexSet) {
+        offsets.forEach { index in
+            let recording = recorderViewModel.recordings[index]
             recorderViewModel.deleteRecording(recording: recording)
         }
     }
@@ -96,30 +98,41 @@ func delete(at offsets: IndexSet) {
 
 struct RecordingRowView: View {
     @ObservedObject var recorderViewModel: RecorderViewModel
-    var index: Int
+    var recordingID: UUID
 
     var body: some View {
-        HStack {
-            Text("\(recorderViewModel.recordings[index].name)")
-            Spacer()
-            Button(action: {
-                if recorderViewModel.recordings[index].isPlaying {
-                    self.recorderViewModel.stopPlaying(index: index)
-                } else {
-                    self.recorderViewModel.playRecording(index: index)
+        if let recording = recorderViewModel.getRecording(by: recordingID) {
+            HStack {
+                Text("\(recording.name)")
+                Spacer()
+                Button(action: {
+                    if recording.isPlaying {
+                        self.recorderViewModel.stopPlaying(id: recordingID)
+                    } else {
+                        self.recorderViewModel.playRecording(id: recordingID)
+                    }
+                }) {
+                    Image(systemName: recording.isPlaying ? "stop.circle" : "play.circle")
                 }
-            }) {
-                Image(systemName: recorderViewModel.recordings[index].isPlaying ? "stop.circle" : "play.circle")
-            }
-            Button(action: {
-                recorderViewModel.currentRecordingIndex = index
-                recorderViewModel.showSheet = true
-            }) {
-                Image(systemName: "pencil")
+                .buttonStyle(PlainButtonStyle()) // Add this
+                .contentShape(Rectangle()) // Make sure only this button is tappable
+
+                Button(action: {
+                    recorderViewModel.currentRecordingID = recording.id
+                    recorderViewModel.showSheet = true
+                }) {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(PlainButtonStyle()) // Add this
+                .contentShape(Rectangle()) // Make sure only this button is tappable
             }
         }
     }
 }
+
+
+
+
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
