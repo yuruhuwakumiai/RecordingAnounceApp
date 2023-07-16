@@ -15,13 +15,18 @@ struct ContentView: View {
         VStack {
             List {
                 Section(header: Text("Recordings")) {
-                    ForEach(recorderViewModel.recordings, id: \.createdAt) { recording in
-                        RecordingRowView(recorderViewModel: recorderViewModel, recording: recording)
+                    ForEach(Array(zip(recorderViewModel.recordings.indices, recorderViewModel.recordings)), id: \.1.createdAt) { index, _ in
+                        RecordingRowView(recorderViewModel: recorderViewModel, index: index)
                     }
                     .onDelete(perform: delete)
                 }
             }
             .navigationBarTitle("Voice recorder")
+
+            Toggle(isOn: $recorderViewModel.repeatMode) {
+                Text("Repeat Mode")
+            }
+            .padding()
 
             ZStack {
                 Circle()
@@ -75,20 +80,25 @@ struct ContentView: View {
 
 struct RecordingRowView: View {
     @ObservedObject var recorderViewModel: RecorderViewModel
-    var recording: Recording
+    var index: Int
 
     var body: some View {
         HStack {
-            Text("\(recording.createdAt.toString(dateFormat: "dd-MM-YY 'at' HH:mm:ss"))")
+            Text("\(recorderViewModel.recordings[index].createdAt.toString(dateFormat: "dd-MM-YY 'at' HH:mm:ss"))")
             Spacer()
             Button(action: {
-                self.recorderViewModel.playRecording(recording: recording)
+                if recorderViewModel.recordings[index].isPlaying {
+                    self.recorderViewModel.stopPlaying(index: index)
+                } else {
+                    self.recorderViewModel.playRecording(index: index)
+                }
             }) {
-                Image(systemName: "play.circle")
+                Image(systemName: recorderViewModel.recordings[index].isPlaying ? "stop.circle" : "play.circle")
             }
         }
     }
 }
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()

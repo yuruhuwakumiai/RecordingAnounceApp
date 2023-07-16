@@ -12,12 +12,14 @@ import AVFoundation
 struct Recording {
     let fileURL: URL
     let createdAt: Date
+    var isPlaying: Bool = false
 }
 
 // MARK: - ViewModel
-class RecorderViewModel: ObservableObject {
+class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var recordings = [Recording]()
     @Published var recording = false
+    @Published var repeatMode = false
 
     var audioRecorder: AVAudioRecorder!
     var audioPlayer: AVAudioPlayer!
@@ -59,17 +61,27 @@ class RecorderViewModel: ObservableObject {
         recordings.append(recording)
     }
 
-    func playRecording(recording: Recording) {
+    func playRecording(index: Int) {
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: recording.fileURL)
+            audioPlayer = try AVAudioPlayer(contentsOf: recordings[index].fileURL)
+            audioPlayer.delegate = self
+            audioPlayer.numberOfLoops = repeatMode ? -1 : 0
             audioPlayer.play()
+            recordings[index].isPlaying = true
         } catch {
             print("Could not play recording")
         }
     }
 
-    func stopPlaying() {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if let index = recordings.firstIndex(where: { $0.fileURL == player.url }) {
+            recordings[index].isPlaying = false
+        }
+    }
+
+    func stopPlaying(index: Int) {
         audioPlayer.stop()
+        recordings[index].isPlaying = false
     }
 
     func deleteRecording(recording: Recording) {
