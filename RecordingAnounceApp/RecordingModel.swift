@@ -13,6 +13,7 @@ struct Recording {
     let fileURL: URL
     let createdAt: Date
     var isPlaying: Bool = false
+    var name: String
 }
 
 // MARK: - ViewModel
@@ -20,9 +21,12 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var recordings = [Recording]()
     @Published var recording = false
     @Published var repeatMode = false
+    @Published var showAlert = false
+    @Published var showSheet = false
 
     var audioRecorder: AVAudioRecorder!
     var audioPlayer: AVAudioPlayer!
+    var currentRecordingIndex: Int?
 
     func startRecording() {
         let recordingSession = AVAudioSession.sharedInstance()
@@ -56,11 +60,13 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     func stopRecording() {
         audioRecorder.stop()
         recording = false
+        showSheet = true
 
-        let recording = Recording(fileURL: audioRecorder.url, createdAt: Date())
+        let recording = Recording(fileURL: audioRecorder.url, createdAt: Date(), name: "New Recording")
         recordings.append(recording)
+        currentRecordingIndex = recordings.count - 1
     }
-
+    
     func playRecording(index: Int) {
         do {
             audioPlayer = try AVAudioPlayer(contentsOf: recordings[index].fileURL)

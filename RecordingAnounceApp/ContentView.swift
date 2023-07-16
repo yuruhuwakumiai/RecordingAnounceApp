@@ -10,6 +10,7 @@ import SwiftUI
 // MARK: - View
 struct ContentView: View {
     @ObservedObject var recorderViewModel = RecorderViewModel()
+    @State private var newRecordingName: String = ""
 
     var body: some View {
         VStack {
@@ -68,11 +69,26 @@ struct ContentView: View {
                 .font(.title)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
         }
+        .sheet(isPresented: $recorderViewModel.showSheet) {
+            VStack {
+                Text("名前をつけてあげよう")
+                TextField("Name", text: $newRecordingName)
+                Button(action: {
+                    if let index = recorderViewModel.currentRecordingIndex {
+                        recorderViewModel.recordings[index].name = newRecordingName
+                    }
+                    recorderViewModel.showSheet = false
+                }) {
+                    Text("Save")
+                }
+            }
+            .padding()
+        }
     }
 
-    func delete(at offsets: IndexSet) {
-        offsets.forEach { index in
-            let recording = recorderViewModel.recordings[index]
+func delete(at offsets: IndexSet) {
+    offsets.forEach { index in
+        let recording = recorderViewModel.recordings[index]
             recorderViewModel.deleteRecording(recording: recording)
         }
     }
@@ -84,7 +100,7 @@ struct RecordingRowView: View {
 
     var body: some View {
         HStack {
-            Text("\(recorderViewModel.recordings[index].createdAt.toString(dateFormat: "dd-MM-YY 'at' HH:mm:ss"))")
+            Text("\(recorderViewModel.recordings[index].name)")
             Spacer()
             Button(action: {
                 if recorderViewModel.recordings[index].isPlaying {
