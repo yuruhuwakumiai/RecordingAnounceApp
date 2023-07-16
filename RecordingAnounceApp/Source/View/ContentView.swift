@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import RealmSwift
 
 // MARK: - View
 struct ContentView: View {
@@ -16,10 +17,19 @@ struct ContentView: View {
         VStack {
             List {
                 Section(header: Text("Recordings")) {
-                    ForEach(recorderViewModel.recordings) { recording in
+                    ForEach(Array(recorderViewModel.recordings), id: \.id) { recording in
                         RecordingRowView(recorderViewModel: recorderViewModel, recordingID: recording.id)
                     }
-                    .onDelete(perform: delete)
+                    .onDelete { indexSet in
+                        indexSet.forEach { index in
+                            let recording = self.recorderViewModel.recordings[index]
+                            let id = recording.id
+                            self.recorderViewModel.deleteRecording(id: id)
+                        }
+                        // Update the recordings
+                        self.recorderViewModel.recordings = self.recorderViewModel.realm.objects(Recording.self).sorted(byKeyPath: "createdAt", ascending: false)
+                    }
+
                 }
             }
             .navigationBarTitle("Voice recorder")
@@ -83,10 +93,12 @@ struct ContentView: View {
                     .padding(.bottom, 20)
                 Button(action: {
                     if let id = recorderViewModel.currentRecordingID,
-                       let index = recorderViewModel.recordings.firstIndex(where: { $0.id == id }) {
-                        recorderViewModel.recordings[index].name = newRecordingName
+                       let recording = recorderViewModel.realm.object(ofType: Recording.self, forPrimaryKey: id) {
+                        try? recorderViewModel.realm.write {
+                            recording.name = newRecordingName
+                        }
+                        recorderViewModel.showSheet = false
                     }
-                    recorderViewModel.showSheet = false
                 }) {
                     Text("保存する")
                         .font(.title2)
@@ -100,20 +112,19 @@ struct ContentView: View {
             }
             .padding()
         }
-
     }
 
     func delete(at offsets: IndexSet) {
         offsets.forEach { index in
             let recording = recorderViewModel.recordings[index]
-            recorderViewModel.deleteRecording(recording: recording)
+            recorderViewModel.deleteRecording(id: recording.id)
         }
     }
 }
 
 struct RecordingRowView: View {
     @ObservedObject var recorderViewModel: RecorderViewModel
-    var recordingID: UUID
+    var recordingID: String
 
     var body: some View {
         if let recording = recorderViewModel.getRecording(by: recordingID) {
@@ -122,9 +133,9 @@ struct RecordingRowView: View {
                 Spacer()
                 Button(action: {
                     if recording.isPlaying {
-                        self.recorderViewModel.stopPlaying(id: recordingID)
+                        self.recorderViewModel.stopPlaying(id: recording.id)
                     } else {
-                        self.recorderViewModel.playRecording(id: recordingID)
+                        self.recorderViewModel.playRecording(id: recording.id)
                     }
                 }) {
                     Image(systemName: recording.isPlaying ? "stop.circle.fill" : "play.circle.fill")
@@ -152,10 +163,6 @@ struct RecordingRowView: View {
         }
     }
 }
-
-
-
-
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
