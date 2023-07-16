@@ -72,8 +72,15 @@ struct ContentView: View {
         }
         .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
+                Spacer()
                 Text("名前をつけてやれ！！")
+                    .font(.title)
+                    .padding()
                 TextField("なまえ", text: $newRecordingName)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(5.0)
+                    .padding(.bottom, 20)
                 Button(action: {
                     if let id = recorderViewModel.currentRecordingID,
                        let index = recorderViewModel.recordings.firstIndex(where: { $0.id == id }) {
@@ -82,10 +89,18 @@ struct ContentView: View {
                     recorderViewModel.showSheet = false
                 }) {
                     Text("保存する")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: 200)
+                        .background(Color.blue)
+                        .cornerRadius(10.0)
                 }
+                Spacer()
             }
             .padding()
         }
+
     }
 
     func delete(at offsets: IndexSet) {
@@ -112,19 +127,41 @@ struct RecordingRowView: View {
                         self.recorderViewModel.playRecording(id: recordingID)
                     }
                 }) {
-                    Image(systemName: recording.isPlaying ? "stop.circle" : "play.circle")
+                    ZStack {
+                        Circle()
+                            .frame(width: 60, height: 60)
+                            .foregroundColor(recording.isPlaying ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
+                            .scaleEffect(recording.isPlaying ? 2 : 1)
+                            .animation(recording.isPlaying ? Animation.easeOut(duration: 1).repeatForever(autoreverses: false) : .default)
+
+                        Circle()
+                            .frame(width: 60, height: 60)
+                            .foregroundColor(recording.isPlaying ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
+                            .scaleEffect(recording.isPlaying ? 1.5 : 1)
+                            .animation(recording.isPlaying ? Animation.easeOut(duration: 1).delay(0.3).repeatForever(autoreverses: false) : .default)
+
+                        Image(systemName: recording.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .foregroundColor(recording.isPlaying ? .green : .blue)
+                            .frame(width: 30, height: 30)
+                    }
                 }
-                .buttonStyle(PlainButtonStyle()) // Add this
-                .contentShape(Rectangle()) // Make sure only this button is tappable
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(Rectangle())
+                .padding()
 
                 Button(action: {
                     recorderViewModel.currentRecordingID = recording.id
                     recorderViewModel.showSheet = true
                 }) {
                     Image(systemName: "pencil")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 20, height: 20)
                 }
-                .buttonStyle(PlainButtonStyle()) // Add this
-                .contentShape(Rectangle()) // Make sure only this button is tappable
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(Rectangle())
             }
         }
     }
