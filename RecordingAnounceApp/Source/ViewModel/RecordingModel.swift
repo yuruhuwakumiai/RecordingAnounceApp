@@ -12,38 +12,85 @@ import AVFoundation
 
 // MARK: - Model
 class Recording: Object {
-    @objc dynamic var id = UUID().uuidString
-    @objc dynamic var fileURL: String = ""
-    @objc dynamic var createdAt = Date()
-    @objc dynamic var isPlaying: Bool = false
-    @objc dynamic var name: String = ""
+    @objc dynamic var id = UUID().uuidString // 一意のID
+    @objc dynamic var fileURL: String = "" // 録音ファイルのURL
+    @objc dynamic var createdAt = Date() // 録音の作成日時
+    @objc dynamic var isPlaying: Bool = false // 再生中かどうか
+    @objc dynamic var name: String = "" // 録音の名前
 
     override static func primaryKey() -> String? {
-        return "id"
+        return "id" // 主キーとしてidを設定
     }
 }
 
 // MARK: - ViewModel
 class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
-    var realm: Realm
-//    @Published var recordings: Results<Recording>
-    @Published var recordings: Results<Recording> // change this line
-    @Published var playingRecordingID: String? // add this new property
-    @Published var recording = false
-    @Published var repeatMode = false
-    @Published var showAlert = false
-    @Published var showSheet = false
+    var realm: Realm // Realmデータベースのインスタンス
+    @Published var recordings: Results<Recording> // 録音のリスト
+    @Published var playingRecordingID: String? // 再生中の録音のID
+    @Published var recording = false // 録音中かどうか
+    @Published var repeatMode = false // リピートモードかどうか
+    @Published var showAlert = false // アラートを表示するかどうか
+    @Published var showSheet = false // シートを表示するかどうか
+    @Published var repeatInterval: TimeInterval = 180 // リピート間隔（秒）
+    @Published var isPlaying = false // 再生中かどうか
+    private var cancellables = Set<AnyCancellable>() // Combineの購読を管理するための変数
 
-    var audioRecorder: AVAudioRecorder!
-    var audioPlayer: AVAudioPlayer!
-    var currentRecordingID: String?
+    var audioRecorder: AVAudioRecorder! // 録音用のオブジェクト
+    var audioPlayer: AVAudioPlayer! // 再生用のオブジェクト
+    var currentRecordingID: String? // 現在録音中の録音のID
+    var repeatTimer: Timer? // リピート再生用のタイマー
 
     override init() {
-        realm = try! Realm()
-        recordings = realm.objects(Recording.self).sorted(byKeyPath: "createdAt", ascending: false)
+        realm = try! Realm() // Realmのインスタンスを作成
+        recordings = realm.objects(Recording.self).sorted(byKeyPath: "createdAt", ascending: false) // 録音のリストを作成日時の降順で取得
         super.init()
+
+        // リピート間隔が変更されたときにタイマーをリセットする
+        $repeatInterval
+            .sink { [weak self] newInterval in
+                self?.resetRepeatTimer(interval: newInterval)
+            }
+            .store(in: &cancellables)
+
+        // リピートモードがオフになったときにタイマーを無効にする
+        $repeatMode
+            .sink { [weak self] isOn in
+                if !isOn {
+                    self?.repeatTimer?.invalidate()
+                    self?.repeatTimer = nil
+                }
+            }
+            .store(in: &cancellables)
+
+        // 再生状態が変更されたときに、リピートモードがオンならタイマーを設定し、オフならタイマーを無効にする
+        $isPlaying
+            .sink { [weak self] isPlaying in
+                print("isPlaying changed to: \(isPlaying)")
+                if !isPlaying && self?.repeatMode == true {
+                    self?.repeatTimer = Timer.scheduledTimer(withTimeInterval: self?.repeatInterval ?? 180, repeats: false) { _ in
+                        if let id = self?.playingRecordingID {
+                            self?.playRecording(id: id)
+                        }
+                    }
+                } else {
+                    self?.repeatTimer?.invalidate()
+                    self?.repeatTimer = nil
+                }
+            }
+            .store(in: &cancellables)
     }
 
+    // リピート再生用のタイマーをリセットするメソッド
+    private func resetRepeatTimer(interval: TimeInterval) {
+        repeatTimer?.invalidate()
+        repeatTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            guard let id = self?.playingRecordingID else { return }
+            self?.playRecording(id: id)
+        }
+    }
+
+    // 録音を開始するメソッド
     func startRecording() {
         let recordingSession = AVAudioSession.sharedInstance()
         do {
@@ -73,6 +120,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
     }
 
+    // 録音を停止するメソッド
     func stopRecording() {
         audioRecorder.stop()
         recording = false
@@ -94,14 +142,17 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
         currentRecordingID = recording.id
     }
-    
+
+    // IDによって録音を取得するメソッド
     func getRecording(by id: String) -> Recording? {
         return realm.object(ofType: Recording.self, forPrimaryKey: id)
     }
 
+    // IDにされた音声を再生するメソ
     func playRecording(id: String) {
         if let recording = getRecording(by: id) {
             do {
+                // 音声ファイい場所を指定
                 let documentPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                 let audioFileUrl = documentPath.appendingPathComponent(recording.fileURL)
 
@@ -114,18 +165,26 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
                     audioPlayer = try AVAudioPlayer(contentsOf: audioFileUrl)
                     audioPlayer.delegate = self
-                    audioPlayer.numberOfLoops = repeatMode ? -1 : 0
+                    audioPlayer.numberOfLoops = 0
 
                     let prepared = audioPlayer.prepareToPlay()
                     print("Prepared to play: \(prepared)")
 
+                    playingRecordingID = nil
+                    print("Audio player status before play: \(audioPlayer.isPlaying)") // Add this line
                     audioPlayer.play()
+                    print("Audio player status after play: \(audioPlayer.isPlaying)") // Add this line
+                    isPlaying = true // Add this line
 
                     try realm.write {
                         recording.isPlaying = true
                     }
 
                     playingRecordingID = id
+
+                    // Invalidate the repeat timer whenever a new recording starts playing
+                    repeatTimer?.invalidate()
+                    repeatTimer = nil
                 } catch {
                     print("Could not play recording: \(error)")
                 }
@@ -141,12 +200,27 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
                     recording.isPlaying = false
                 }
             } catch {
-                print("Failed to update isPlaying status: \(error)")
+                print("Failed to update isPlaying status: \( error )")
             }
         }
-        playingRecordingID = nil // Move this line outside of DispatchQueue.main.async block
+
+        // Schedule the repeat timer whenever a recording finishes playing
+        DispatchQueue.main.async { [weak self] in
+            if self?.repeatMode == true, let id = self?.playingRecordingID {
+                print("Scheduling next play") // Add this line
+                self?.repeatTimer = Timer.scheduledTimer(withTimeInterval: self?.repeatInterval ?? 5, repeats: false) { _ in
+                    print("Next play started") // Add this line
+                    self?.playRecording(id: id)
+                }
+            } else {
+                // Reset playingRecordingID and isPlaying when not in repeat mode
+                self?.playingRecordingID = nil
+                self?.isPlaying = false
+            }
+        }
     }
-    
+
+
     func stopPlaying(id: String) {
         if let recording = getRecording(by: id) {
             audioPlayer.stop()

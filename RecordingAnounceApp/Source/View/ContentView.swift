@@ -12,6 +12,7 @@ import RealmSwift
 struct ContentView: View {
     @ObservedObject var recorderViewModel = RecorderViewModel()
     @State private var newRecordingName: String = "名無し"
+    @State private var repeatIntervalText: String = "180"
 
     var body: some View {
         VStack {
@@ -32,11 +33,21 @@ struct ContentView: View {
                 }
             }
 
-            Toggle(isOn: $recorderViewModel.repeatMode) {
-                Text("Repeat Mode")
-            }
-            .padding()
+            HStack {
+                Toggle(isOn: $recorderViewModel.repeatMode) {
+                    Text("Repeat Mode")
+                }
+                .padding()
 
+                TextField("Repeat Interval", text: $repeatIntervalText, onCommit: {
+                    if let interval = TimeInterval(repeatIntervalText) {
+                        recorderViewModel.repeatInterval = interval
+                    }
+                })
+                .keyboardType(.numberPad)
+                .padding()
+            }
+            
             ZStack {
                 if self.recorderViewModel.recording {
                     PulsingAnimation()
