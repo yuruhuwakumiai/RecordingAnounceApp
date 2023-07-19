@@ -29,10 +29,8 @@ struct ContentView: View {
                         // Update the recordings
                         self.recorderViewModel.recordings = self.recorderViewModel.realm.objects(Recording.self).sorted(byKeyPath: "createdAt", ascending: false)
                     }
-
                 }
             }
-            .navigationBarTitle("Voice recorder")
 
             Toggle(isOn: $recorderViewModel.repeatMode) {
                 Text("Repeat Mode")
@@ -70,8 +68,8 @@ struct ContentView: View {
             Text(self.recorderViewModel.recording ? "録音中" : "タップして声(魂)を吹き込め！")
                 .font(.title)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
-
-        }        .sheet(isPresented: $recorderViewModel.showSheet) {
+        }
+        .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
                 Spacer()
                 Text("名前をつけてやれ！！")
@@ -115,6 +113,7 @@ struct ContentView: View {
 
 struct RecordingRowView: View {
     @ObservedObject var recorderViewModel: RecorderViewModel
+    
     var recordingID: String
 
     var body: some View {

@@ -29,7 +29,6 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 //    @Published var recordings: Results<Recording>
     @Published var recordings: Results<Recording> // change this line
     @Published var playingRecordingID: String? // add this new property
-
     @Published var recording = false
     @Published var repeatMode = false
     @Published var showAlert = false
@@ -74,14 +73,12 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
     }
 
-
     func stopRecording() {
         audioRecorder.stop()
         recording = false
         showSheet = true
 
-        // Use the entire URL, not just the last path component
-        let audioFileName = audioRecorder.url.absoluteString
+        let audioFileName = audioRecorder.url.lastPathComponent
         let recording = Recording()
         recording.fileURL = audioFileName // This line is modified
         recording.createdAt = Date()
@@ -97,10 +94,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
         currentRecordingID = recording.id
     }
-
-
-
-
+    
     func getRecording(by id: String) -> Recording? {
         return realm.object(ofType: Recording.self, forPrimaryKey: id)
     }
@@ -108,48 +102,51 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     func playRecording(id: String) {
         if let recording = getRecording(by: id) {
             do {
-                // Use the entire URL, not just the filename
-                let audioFileUrl = URL(string: recording.fileURL)!
+                let documentPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                let audioFileUrl = documentPath.appendingPathComponent(recording.fileURL)
 
                 print("Trying to play audio file at: \(audioFileUrl)")
 
-                audioPlayer = try AVAudioPlayer(contentsOf: audioFileUrl)
-                audioPlayer.delegate = self
-                audioPlayer.numberOfLoops = repeatMode ? -1 : 0
-                audioPlayer.play()
+                do {
+                    let audioSession = AVAudioSession.sharedInstance()
+                    try audioSession.setCategory(.playback)
+                    try audioSession.setActive(true)
 
-                try realm.write {
-                    recording.isPlaying = true
+                    audioPlayer = try AVAudioPlayer(contentsOf: audioFileUrl)
+                    audioPlayer.delegate = self
+                    audioPlayer.numberOfLoops = repeatMode ? -1 : 0
+
+                    let prepared = audioPlayer.prepareToPlay()
+                    print("Prepared to play: \(prepared)")
+
+                    audioPlayer.play()
+
+                    try realm.write {
+                        recording.isPlaying = true
+                    }
+
+                    playingRecordingID = id
+                } catch {
+                    print("Could not play recording: \(error)")
                 }
-
-                playingRecordingID = id
-            } catch {
-                print("Could not play recording: \(error)")
             }
         }
     }
 
-
-
-
-
-
-
-
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        if let recording = realm.objects(Recording.self).filter("fileURL == %@", player.url!.absoluteString).first {
+        print("Finished playing audio")
+        if let recording = realm.objects(Recording.self).filter("fileURL == %@", player.url!.lastPathComponent).first {
             do {
                 try realm.write {
                     recording.isPlaying = false
                 }
-
-                playingRecordingID = nil // add this line
             } catch {
                 print("Failed to update isPlaying status: \(error)")
             }
         }
+        playingRecordingID = nil // Move this line outside of DispatchQueue.main.async block
     }
-
+    
     func stopPlaying(id: String) {
         if let recording = getRecording(by: id) {
             audioPlayer.stop()
