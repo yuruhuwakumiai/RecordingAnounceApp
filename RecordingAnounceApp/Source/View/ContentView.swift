@@ -41,16 +41,16 @@ struct ContentView: View {
                 }
                 .padding()
 
-                Spacer()
-
                 TextField("Repeat Interval", text: $repeatIntervalText, onCommit: {
                     if let interval = TimeInterval(repeatIntervalText) {
                         recorderViewModel.repeatInterval = interval
                     }
                 })
                 .keyboardType(.numberPad)
-                .padding()
+                .frame(height: 50)
+                .frame(width: 80)
                 .background(Color.white) // 背景色を白に設定
+                .multilineTextAlignment(.center) // 右詰に設定
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray, lineWidth: 1)) // 枠線を追加
 
                 Spacer()
@@ -65,7 +65,7 @@ struct ContentView: View {
                 Circle()
                     .stroke(lineWidth: 20)
                     .frame(width: 100, height: 100)
-                    .foregroundColor(self.recorderViewModel.recording ? .red : .gray)
+                    .foregroundColor(self.recorderViewModel.recording ? .red : .green)
 
                 Button(action: {
                     if self.recorderViewModel.recording {
@@ -85,9 +85,10 @@ struct ContentView: View {
             .padding(.bottom, 10)
 
             Text(self.recorderViewModel.recording ? "録音中" : "タップして声(魂)を吹き込め！")
-                .font(.title)
+                .font(.title3)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
         }
+        .background(.yellow) //　画面下部の背景色
         .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
                 Spacer()
