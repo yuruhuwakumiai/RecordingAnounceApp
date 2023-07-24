@@ -11,7 +11,7 @@ import RealmSwift
 // MARK: - View
 struct ContentView: View {
     @ObservedObject var recorderViewModel = RecorderViewModel()
-    @State private var newRecordingName: String = "名無し"
+    @State private var newRecordingName: String = "名称変更"
     @State private var repeatIntervalText: String = "10"
 
     var body: some View {
@@ -41,17 +41,17 @@ struct ContentView: View {
                 }
                 .padding()
 
-                TextField("Repeat Interval", text: $repeatIntervalText, onCommit: {
+                NumberTextField(text: $repeatIntervalText) {
                     if let interval = TimeInterval(repeatIntervalText) {
                         recorderViewModel.repeatInterval = interval
                     }
-                })
-                .keyboardType(.numberPad)
+                }
                 .frame(height: 50)
                 .frame(width: 80)
-                .background(Color.white) // 背景色を白に設定
-                .multilineTextAlignment(.center) // 右詰に設定
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray, lineWidth: 1)) // 枠線を追加
+                .background(Color.white)
+                .multilineTextAlignment(.center)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray, lineWidth: 1))
 
                 Spacer()
             }
@@ -84,7 +84,7 @@ struct ContentView: View {
             .padding(.all, 10)
             .padding(.bottom, 10)
 
-            Text(self.recorderViewModel.recording ? "録音中" : "タップして声(魂)を吹き込め！")
+            Text(self.recorderViewModel.recording ? "録音中" : "タップして録音")
                 .font(.title3)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
         }
@@ -92,7 +92,7 @@ struct ContentView: View {
         .sheet(isPresented: $recorderViewModel.showSheet) {
             VStack {
                 Spacer()
-                Text("名前をつけてやれ！！")
+                Text("名称変更")
                     .font(.title)
                     .padding()
                 TextField("なまえ", text: $newRecordingName)
@@ -152,7 +152,7 @@ struct RecordingRowView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .foregroundColor(self.recorderViewModel.playingRecordingID == recording.id ? .green : .blue)
-                        .frame(width: 25, height: 25)
+                        .frame(width: 40, height: 40)
                 }
                 .buttonStyle(PlainButtonStyle())
                 .contentShape(Rectangle())
@@ -180,7 +180,7 @@ struct PulsingAnimation: View {
     var body: some View {
         Circle()
             .fill(Color.red.opacity(0.3))
-            .scaleEffect(isAnimating ? 1 : 0.6)
+            .scaleEffect(isAnimating ? 1 : 0.3)
             .animation(Animation.easeInOut(duration: 1).repeatForever(autoreverses: true))
             .onAppear {
                 isAnimating = true
@@ -188,6 +188,48 @@ struct PulsingAnimation: View {
             .onDisappear {
                 isAnimating = false
             }
+    }
+}
+
+struct NumberTextField: UIViewRepresentable {
+    @Binding var text: String
+    var onCommit: (() -> Void)?
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.keyboardType = .numberPad
+        textField.delegate = context.coordinator
+
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: context.coordinator, action: #selector(Coordinator.doneButtonTapped))
+        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        toolbar.items = [flexSpace, doneButton]
+
+        textField.inputAccessoryView = toolbar
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        uiView.text = text
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: NumberTextField
+
+        init(_ parent: NumberTextField) {
+            self.parent = parent
+        }
+
+        @objc func doneButtonTapped() {
+            parent.text = parent.text
+            parent.onCommit?()
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
     }
 }
 

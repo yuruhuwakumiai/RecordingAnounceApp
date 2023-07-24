@@ -32,7 +32,7 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var repeatMode = false // リピートモードかどうか
     @Published var showAlert = false // アラートを表示するかどうか
     @Published var showSheet = false // シートを表示するかどうか
-    @Published var repeatInterval: TimeInterval = 180 // リピート間隔（秒）
+    @Published var repeatInterval: TimeInterval = 10 // リピート間隔（秒）
     @Published var isPlaying = false // 再生中かどうか
     private var cancellables = Set<AnyCancellable>() // Combineの購読を管理するための変数
 
@@ -49,7 +49,10 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
         // リピート間隔が変更されたときにタイマーをリセットする
         $repeatInterval
             .sink { [weak self] newInterval in
-                self?.resetRepeatTimer(interval: newInterval)
+                if self?.isPlaying == true, let id = self?.playingRecordingID {
+                    // 新しいリピート間隔で再生をスケジュールし直す
+                    self?.playRecording(id: id)
+                }
             }
             .store(in: &cancellables)
 
@@ -219,7 +222,6 @@ class RecorderViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
             }
         }
     }
-
 
     func stopPlaying(id: String) {
         if let recording = getRecording(by: id) {
