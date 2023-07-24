@@ -11,7 +11,7 @@ import RealmSwift
 // MARK: - View
 struct ContentView: View {
     @ObservedObject var recorderViewModel = RecorderViewModel()
-    @State private var newRecordingName: String = "名称変更"
+    @State private var newRecordingName: String = "放送に名前をつけましょう"
     @State private var repeatIntervalText: String = "10"
 
     var body: some View {
@@ -34,7 +34,6 @@ struct ContentView: View {
             }
 
             HStack {
-                Spacer()
 
                 Toggle(isOn: $recorderViewModel.repeatMode) {
                     Text("Repeat Mode")
@@ -53,6 +52,7 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray, lineWidth: 1))
 
+                Text("秒")
                 Spacer()
             }
 
@@ -84,7 +84,7 @@ struct ContentView: View {
             .padding(.all, 10)
             .padding(.bottom, 10)
 
-            Text(self.recorderViewModel.recording ? "録音中" : "タップして録音")
+            Text(self.recorderViewModel.recording ? "放送を録音中" : "タップして放送を録音")
                 .font(.title3)
                 .foregroundColor(self.recorderViewModel.recording ? .red : .black)
         }
@@ -199,6 +199,7 @@ struct NumberTextField: UIViewRepresentable {
         let textField = UITextField()
         textField.keyboardType = .numberPad
         textField.delegate = context.coordinator
+        textField.textAlignment = .center  // テキストをセンターに配置
 
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
@@ -207,8 +208,10 @@ struct NumberTextField: UIViewRepresentable {
         toolbar.items = [flexSpace, doneButton]
 
         textField.inputAccessoryView = toolbar
+        context.coordinator.textField = textField  // textFieldの参照を保存
         return textField
     }
+
 
     func updateUIView(_ uiView: UITextField, context: Context) {
         uiView.text = text
@@ -220,13 +223,14 @@ struct NumberTextField: UIViewRepresentable {
 
     class Coordinator: NSObject, UITextFieldDelegate {
         var parent: NumberTextField
+        var textField: UITextField?  // UITextFieldの参照を保持するプロパティを追加
 
         init(_ parent: NumberTextField) {
             self.parent = parent
         }
 
         @objc func doneButtonTapped() {
-            parent.text = parent.text
+            parent.text = textField?.text ?? ""  // textFieldのテキストをparent.textに設定
             parent.onCommit?()
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
